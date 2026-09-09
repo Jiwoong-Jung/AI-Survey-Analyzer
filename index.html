@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI 강의평가 인사이트</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="hero">
+    <div>
+      <h1>AI 강의평가 인사이트</h1>
+      <p>설문 문항 TXT + 응답 XLSX를 교체하여 분석하는 웹페이지 도구</p>
+    </div>
+    <span class="badge">BROWSER LOCAL</span>
+  </header>
+
+  <main class="wrap">
+    <section class="upload-card">
+      <div class="file-field">
+        <label class="btn blue" for="txtFile">설문 문항 TXT 선택</label>
+        <input id="txtFile" type="file" accept=".txt,text/plain" hidden />
+        <span id="txtName" class="file-name">선택되지 않음</span>
+      </div>
+      <div class="file-field">
+        <label class="btn indigo" for="xlsxFile">응답 XLSX 선택</label>
+        <input id="xlsxFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
+        <span id="xlsxName" class="file-name">선택되지 않음</span>
+      </div>
+      <button id="runBtn" class="btn teal">분석 실행</button>
+    </section>
+
+    <section class="privacy-note">
+      <strong>개인정보 보호:</strong> 선택한 TXT/XLSX는 외부 서버에 업로드하지 않고 현재 브라우저 안에서만 분석합니다. 교수자 실명은 분석 화면과 보고서에서 자동 익명화됩니다.
+    </section>
+
+    <section class="kpis">
+      <article><span>총 응답</span><strong id="kpiResponses">-</strong></article>
+      <article><span>전체 평균</span><strong id="kpiAvg">-</strong></article>
+      <article><span>정량 문항</span><strong id="kpiQuestions">-</strong></article>
+      <article><span>서술형 의견</span><strong id="kpiComments">-</strong></article>
+    </section>
+
+    <section class="panel">
+      <nav class="tabs" aria-label="분석 탭">
+        <button class="tab active" data-tab="summary">요약 대시보드</button>
+        <button class="tab" data-tab="questions">문항별 분석</button>
+        <button class="tab" data-tab="keywords">키워드·의견</button>
+        <button class="tab" data-tab="feedback">응답자별 피드백</button>
+      </nav>
+
+      <div id="tab-summary" class="tab-panel active">
+        <p id="summaryText" class="summary-text">TXT와 XLSX 파일을 선택한 뒤 분석을 실행해주세요.</p>
+        <div id="summaryTable"></div>
+      </div>
+
+      <div id="tab-questions" class="tab-panel">
+        <div id="questionTable"></div>
+      </div>
+
+      <div id="tab-keywords" class="tab-panel">
+        <div class="split">
+          <div>
+            <h3>핵심 키워드</h3>
+            <div id="keywordTable"></div>
+          </div>
+          <div>
+            <h3>서술형 의견 원문</h3>
+            <div id="commentTable"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-feedback" class="tab-panel">
+        <div id="feedbackTable"></div>
+        <div class="actions">
+          <button id="exportBtn" class="btn purple">분석 보고서 저장</button>
+        </div>
+      </div>
+    </section>
+
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+  </main>
+
+  <!-- XLSX 파싱용 SheetJS. 파일 데이터는 서버로 전송되지 않으며 브라우저에서만 처리됩니다. -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
