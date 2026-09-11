@@ -7,7 +7,7 @@
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fmt=n=>n==null?'—':Number(n).toFixed(2);
   function status(text,type=''){ $('status').textContent=text;$('status').className='status '+type; }
-  function busy(value){state.busy=value;for(const id of ['runBtn','demoBtn','txtFile','xlsxFile','sheetSelect','headerRow','scale','encoding','course','period','extraNames'])$(id).disabled=value||(id==='sheetSelect'&&(!state.sheets.length||state.demo));document.querySelectorAll('[data-column],[data-sentiment],[data-feedback-select],[data-feedback-text],#selectTenBtn,#includeComments,#privacyChecked').forEach(x=>{x.disabled=value||(x.dataset.feedbackSelect!=null&&!state.analysis?.feedback[Number(x.dataset.feedbackSelect)]?.opinionIds.length);});syncExport();}
+  function busy(value){state.busy=value;for(const id of ['runBtn','demoBtn','txtFile','xlsxFile','sheetSelect','headerRow','scale','encoding','course','period','extraNames','clearTxtBtn'])$(id).disabled=value||(id==='sheetSelect'&&(!state.sheets.length||state.demo));document.querySelectorAll('[data-column],[data-sentiment],[data-feedback-select],[data-feedback-text],#selectTenBtn,#includeComments,#privacyChecked').forEach(x=>{x.disabled=value||(x.dataset.feedbackSelect!=null&&!state.analysis?.feedback[Number(x.dataset.feedbackSelect)]?.opinionIds.length);});syncExport();}
   function syncExport(){ $('exportBtn').disabled=state.busy||!state.analysis||!$('privacyChecked').checked; }
   function clearAnalysis(){
     state.analysis=null;$('privacyChecked').checked=false;syncExport();
@@ -23,11 +23,12 @@
   }
   function mapping(){
     if(!state.raw)return;
-    state.prepared=E.prepare(state.raw,state.survey,options());
+    state.prepared=E.prepare(state.raw,state.survey,{...options(),allowUnconfigured:true});
     const p=state.prepared;
-    $('mappingCount').textContent=`${p.columns.length}열 / TXT ${p.surveyCount}문항`;
+    $('mappingCount').textContent=`${p.columns.length}열 / ${p.hasSurveyText?'TXT '+p.surveyCount+'문항 대조':'엑셀 문항 사용'}`;
+    $('sourceInfo').textContent=p.hasSurveyText?`엑셀 문항 사용 / TXT ${p.surveyCount}문항 선택 대조`:'엑셀 문항 사용 / TXT 대조 생략';
     $('columnMapping').className='';
-    $('columnMapping').innerHTML='<div class="table-wrap"><table><thead><tr><th>열</th><th>익명화한 문항명</th><th>TXT 대조</th><th>분석 용도</th></tr></thead><tbody>'+p.columns.map(c=>'<tr><td>'+String(c.index+1)+'</td><td class="wide">'+esc(c.header)+'</td><td>'+(c.matched?'일치':'확인 필요')+'</td><td><select data-column="'+c.index+'" aria-label="'+esc(c.header)+' 분석 용도">'+[['score','정량 점수'],['comment','서술형 의견'],['exclude','분석 제외']].map(([v,n])=>'<option value="'+v+'"'+(c.role===v?' selected':'')+'>'+n+'</option>').join('')+'</select></td></tr>').join('')+'</tbody></table></div>';
+    $('columnMapping').innerHTML='<div class="table-wrap"><table><thead><tr><th>열</th><th>익명화한 문항명</th><th>TXT 대조 (선택)</th><th>분석 용도</th></tr></thead><tbody>'+p.columns.map(c=>'<tr><td>'+String(c.index+1)+'</td><td class="wide">'+esc(c.header)+'</td><td>'+(c.role==='exclude'?'분석 제외':!p.hasSurveyText?'대조 생략':c.matched?'일치':'확인 필요')+'</td><td><select data-column="'+c.index+'" aria-label="'+esc(c.header)+' 분석 용도">'+[['score','정량 점수'],['comment','서술형 의견'],['exclude','분석 제외']].map(([v,n])=>'<option value="'+v+'"'+(c.role===v?' selected':'')+'>'+n+'</option>').join('')+'</select></td></tr>').join('')+'</tbody></table></div>';
     $('inputInfo').textContent=`응답 ${p.records.length}행 / 정량 ${p.columns.filter(c=>c.role==='score').length}열 / 서술형 ${p.columns.filter(c=>c.role==='comment').length}열`;
   }
   async function readText(file){
@@ -42,7 +43,7 @@
   async function loadFiles(sheetIndex=null){
     const token=++state.token;clearAnalysis();busy(true);state.demo=false;$('demoBanner').hidden=true;
     const tf=$('txtFile').files[0],xf=$('xlsxFile').files[0];
-    $('txtName').textContent=tf?tf.name:'선택되지 않음';$('xlsxName').textContent=xf?xf.name:'선택되지 않음';
+    $('txtName').textContent=tf?tf.name:'미선택 — 엑셀만으로 분석 가능';$('xlsxName').textContent=xf?xf.name:'선택되지 않음';
     state.raw=null;state.survey='';state.prepared=null;state.roles=null;state.sheets=[];state.readWarnings=[];
     $('mappingCount').textContent='';$('inputInfo').textContent='';
     $('columnMapping').innerHTML='<div class="empty compact">자료를 읽고 있습니다.</div>';status('파일을 브라우저 안에서 읽고 있습니다.');
@@ -58,14 +59,13 @@
         $('sheetSelect').innerHTML=workbook.sheetNames.map((n,i)=>'<option value="'+i+'">'+esc(n)+'</option>').join('');$('sheetSelect').value=String(workbook.sheetIndex);
         $('headerRow').value=String(E.detectHeader(workbook.rows)+1);mapping();
       }else{$('sheetSelect').innerHTML='<option>파일 선택 후 표시</option>';$('columnMapping').innerHTML='<div class="empty compact">응답 XLSX를 선택해주세요.</div>';$('inputInfo').textContent='';}
-      status(workbook?(tf?'자료를 읽었습니다. 문항 인식 결과를 확인하고 분석을 실행하세요.':'응답 파일을 읽었습니다. 설문 문항 TXT도 선택해주세요.'):'문항 파일을 읽었습니다. 응답 XLSX를 선택해주세요.','ok');
+      status(workbook?(tf?'자료를 읽었습니다. TXT 대조는 참고용입니다. 문항과 열 용도를 확인하고 분석을 실행하세요.':'엑셀 파일을 읽었습니다. TXT 없이 분석할 수 있습니다. 문항과 열 용도를 확인하세요.'):'응답 XLSX를 선택해주세요. TXT는 선택 사항입니다.','ok');
     }catch(err){if(token!==state.token)return;state.raw=null;state.prepared=null;state.sheets=[];$('inputInfo').textContent='';$('mappingCount').textContent='';$('columnMapping').innerHTML='<div class="empty compact">자료를 불러오지 못했습니다.</div>';status(err.message||'파일을 읽지 못했습니다.','error');}
     finally{if(token===state.token)busy(false);}
   }
   async function run(){
     clearAnalysis();
     try{
-      if(!state.survey)throw new Error('설문 문항 TXT를 먼저 선택해주세요.');
       if(!state.raw)throw new Error('응답 XLSX를 먼저 선택해주세요.');
       busy(true);status('점수, 의견, 개선 방안과 개인별 피드백을 분석하고 있습니다.');
       const token=++state.token;await new Promise(r=>setTimeout(r,20));if(token!==state.token)return;
@@ -83,7 +83,8 @@
       ['전체 평균',fmt(a.avg)+' / '+a.scale+'점 (모든 유효 점수 합 ÷ 유효 점수 수)'],
       ['정량 점수 제외 내역',`빈칸 ${a.totals.blank} / 0값 ${a.totals.zero} / 해당 없음 ${a.totals.excluded} / 기타 무효 ${a.totals.invalid}`],
       ['서술형 제외 내역',`빈칸 ${a.commentStats.blank} / 내용 없는 응답 ${a.commentStats.nonresponse}`],
-      ['문항 확인',`엑셀 ${a.headerRow}행 / TXT ${a.surveyCount}문항 / 일치 ${a.matched}열`],
+      ['문항 출처',`${a.questionSource} / ${a.comparisonStatus}`],
+      ['문항 확인',a.hasSurveyText?`엑셀 ${a.headerRow}행 / TXT ${a.surveyCount}문항 / 분석 대상 일치 ${a.matched}열`:`엑셀 ${a.headerRow}행의 문항명과 응답으로 분석 (TXT 미사용)`],
       ['익명화 탐지',`교수자 ${a.privacy.teachers}개 이름 / 교육생 ${a.privacy.participants}개 이름 (공유 전 수동 확인 필요)`],
       ['의견 분류 검토',`${a.reviewCount}건은 혼합 표현 또는 판단 유보 상태입니다.`],
       ['자료 처리',`합계·요약 ${a.skipped}행 및 선택한 설문 열이 빈 ${a.ignoredRows}행 제외`]
@@ -122,15 +123,33 @@
     if(name==='report')renderReport();
   }
   function modified(){ $('privacyChecked').checked=false;syncExport();if(!$('panel-report').hidden)renderReport(); }
-  $('txtFile').addEventListener('change',()=>loadFiles());$('xlsxFile').addEventListener('change',()=>loadFiles());
+  async function loadOptionalText(){
+    const token=++state.token;clearAnalysis();busy(true);state.survey='';
+    const file=$('txtFile').files[0];
+    try{
+      if(file&&!/\.txt$/i.test(file.name))throw new Error('문항 파일은 .txt로 선택해주세요.');
+      const text=file?await readText(file):'';if(token!==state.token)return;
+      state.survey=text;$('txtName').textContent=file?file.name:'미선택 — 엑셀만으로 분석 가능';
+      if(state.raw)mapping();else $('sourceInfo').textContent=text?'엑셀 선택 대기 / TXT 선택 대조 준비':'엑셀 문항 사용 / TXT 대조 생략';
+      status(state.raw?'TXT 대조 설정이 변경되었습니다. 다시 분석해주세요.':'TXT 대조 파일을 읽었습니다. 응답 XLSX를 선택해주세요.','ok');
+    }catch(err){
+      if(token!==state.token)return;
+      $('txtFile').value='';state.survey='';$('txtName').textContent='TXT 읽기 실패 — 선택 해제됨';
+      if(state.raw)mapping();else $('sourceInfo').textContent='엑셀 문항 사용 / TXT 대조 생략';
+      status((err.message||'TXT를 읽지 못했습니다.')+' TXT를 해제했습니다. 엑셀만으로 분석할 수 있습니다.','error');
+    }finally{if(token===state.token)busy(false);}
+  }
+  $('txtFile').addEventListener('change',loadOptionalText);
+  $('clearTxtBtn').addEventListener('click',()=>{if(state.busy)return;$('txtFile').value='';loadOptionalText();});
+  $('xlsxFile').addEventListener('change',()=>loadFiles());
   $('sheetSelect').addEventListener('change',()=>loadFiles(Number($('sheetSelect').value)));
-  $('encoding').addEventListener('change',()=>{if(!state.demo)loadFiles();});
+  $('encoding').addEventListener('change',()=>{if($('txtFile').files[0])loadOptionalText();});
   ['headerRow','scale','extraNames'].forEach(id=>$(id).addEventListener('change',()=>{clearAnalysis();state.roles=null;try{mapping();status('설정이 변경되었습니다. 다시 분석해주세요.');}catch(err){status(err.message,'error');}}));
   ['course','period'].forEach(id=>$(id).addEventListener('input',()=>{clearAnalysis();status('보고서 정보가 변경되었습니다. 다시 분석해주세요.');}));
   $('columnMapping').addEventListener('change',e=>{const target=e.target;if(!target.matches('[data-column]'))return;state.roles=Object.fromEntries(state.prepared.columns.map(c=>[c.index,c.role]));state.roles[Number(target.dataset.column)]=target.value;clearAnalysis();try{mapping();status('분석할 열을 변경했습니다. 다시 분석해주세요.');}catch(err){status(err.message,'error');}});
   $('runBtn').addEventListener('click',run);
-  $('resetBtn').addEventListener('click',()=>{state.token++;state.raw=null;state.survey='';state.prepared=null;state.roles=null;state.demo=false;state.sheets=[];state.readWarnings=[];for(const id of ['txtFile','xlsxFile','course','period','extraNames'])$(id).value='';$('headerRow').value='1';$('scale').value='5';$('encoding').value='auto';$('txtName').textContent=$('xlsxName').textContent='선택되지 않음';$('mappingCount').textContent='';$('columnMapping').innerHTML='<div class="empty compact">응답 파일을 선택해주세요.</div>';$('sheetSelect').innerHTML='<option>파일 선택 후 표시</option>';$('inputInfo').textContent='';$('includeComments').checked=false;$('demoBanner').hidden=true;clearAnalysis();busy(false);showTab('summary');status('현재 페이지의 자료와 분석 결과를 초기화했습니다. 이미 저장한 PDF는 삭제되지 않습니다.');});
-  $('demoBtn').addEventListener('click',()=>{state.token++;clearAnalysis();state.demo=true;state.raw=structuredClone(SURVEY_DEMO.rows);state.survey=SURVEY_DEMO.questions;state.roles=null;state.readWarnings=[];state.sheets=['가상 시연 응답'];$('txtFile').value='';$('xlsxFile').value='';$('extraNames').value='';$('scale').value='5';$('txtName').textContent='내장 가상 문항';$('xlsxName').textContent='내장 가상 응답 (실데이터 아님)';$('course').value='가상 교육과정 — 시연용';$('period').value='가상 설문';$('headerRow').value=String(E.detectHeader(state.raw)+1);$('sheetSelect').innerHTML='<option value="0">가상 시연 응답</option>';$('sheetSelect').disabled=true;$('demoBanner').hidden=false;mapping();run();});
+  $('resetBtn').addEventListener('click',()=>{state.token++;state.raw=null;state.survey='';state.prepared=null;state.roles=null;state.demo=false;state.sheets=[];state.readWarnings=[];for(const id of ['txtFile','xlsxFile','course','period','extraNames'])$(id).value='';$('headerRow').value='1';$('scale').value='5';$('encoding').value='auto';$('txtName').textContent='미선택 — 엑셀만으로 분석 가능';$('xlsxName').textContent='선택되지 않음';$('sourceInfo').textContent='엑셀 문항 사용 / TXT 대조 생략';$('optionalTxt').open=false;$('settings').open=false;$('mappingCount').textContent='';$('columnMapping').innerHTML='<div class="empty compact">응답 파일을 선택해주세요.</div>';$('sheetSelect').innerHTML='<option>파일 선택 후 표시</option>';$('inputInfo').textContent='';$('includeComments').checked=false;$('demoBanner').hidden=true;clearAnalysis();busy(false);showTab('summary');status('현재 페이지의 자료와 분석 결과를 초기화했습니다. 이미 저장한 PDF는 삭제되지 않습니다.');});
+  $('demoBtn').addEventListener('click',()=>{state.token++;clearAnalysis();state.demo=true;state.raw=structuredClone(SURVEY_DEMO.rows);state.survey='';state.roles=null;state.readWarnings=[];state.sheets=['가상 시연 응답'];$('txtFile').value='';$('xlsxFile').value='';$('extraNames').value='';$('scale').value='5';$('txtName').textContent='미선택 — 엑셀만으로 분석 가능';$('optionalTxt').open=false;$('xlsxName').textContent='내장 가상 응답 (실데이터 아님)';$('course').value='가상 교육과정 — 시연용';$('period').value='가상 설문';$('headerRow').value=String(E.detectHeader(state.raw)+1);$('sheetSelect').innerHTML='<option value="0">가상 시연 응답</option>';$('sheetSelect').disabled=true;$('demoBanner').hidden=false;mapping();run();});
   document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
   document.querySelector('.tabs').addEventListener('keydown',e=>{if(!['ArrowRight','ArrowLeft','Home','End'].includes(e.key))return;e.preventDefault();const tabs=Array.from(document.querySelectorAll('.tab')),i=tabs.indexOf(document.activeElement);let n=e.key==='Home'?0:e.key==='End'?tabs.length-1:(i+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;tabs[n].focus();showTab(tabs[n].dataset.tab);});
   $('opinionFilter').addEventListener('change',renderOpinions);

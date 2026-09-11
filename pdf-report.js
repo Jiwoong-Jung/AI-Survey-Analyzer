@@ -12,11 +12,11 @@
   const table=(headers,rows,widths)=>({type:'table',headers,rows,widths});
   function reportTime(iso){const d=new Date(iso);return Number.isNaN(d.getTime())?'시각 확인 필요':d.toLocaleString('ko-KR',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})+' (한국시간)';}
   function blocks(a,includeComments=false){
-    const b=[{type:'title',text:'강의평가 분석 보고서'},para(`과정명: ${a.course}\n설문 기간: ${a.period}\n분석 시각: ${reportTime(a.createdAt)}\n분석 방식: ${a.engine}`),
+    const b=[{type:'title',text:'강의평가 분석 보고서'},para(`과정명: ${a.course}\n설문 기간: ${a.period}\n문항 출처: ${a.questionSource||'엑셀 문항 사용'} / ${a.comparisonStatus||'TXT 대조 생략'}\n분석 시각: ${reportTime(a.createdAt)}\n분석 방식: ${a.engine}`),
       heading('01  분석 개요'),table(['분석 대상','전체 평균','정량 문항','분석 가능 의견'],[[`${a.responses}명`,`${val(a.avg)} / ${a.scale}`,`${a.questions.length}개`,`${a.comments.length}건`]],[1,1,1,1]),
       para('전체 평균 = 모든 유효한 정량 점수의 합 ÷ 유효 점수 개수. 문항별 평균의 단순 평균과 다를 수 있습니다. 점수의 크기로 개인의 성향이나 역량을 판단하지 않습니다.'),
       table(['유효 점수','빈칸','0값 (척도 밖)','해당 없음','기타 무효값'],[[a.totals.valid,a.totals.blank,a.totals.zero,a.totals.excluded,a.totals.invalid]],[1,1,1,1,1]),
-      para(`서술형 제외: 빈칸 ${a.commentStats.blank}건 / 내용 없는 응답 ${a.commentStats.nonresponse}건. ‘0’, ‘없음’ 등을 감정 분석의 중립 응답으로 넣지 않습니다.\n문항명 행: ${a.headerRow}행 / TXT 인식 문항: ${a.surveyCount}개 / TXT 일치 열: ${a.matched}개`),
+      para(`서술형 제외: 빈칸 ${a.commentStats.blank}건 / 내용 없는 응답 ${a.commentStats.nonresponse}건. ‘0’, ‘없음’ 등을 감정 분석의 중립 응답으로 넣지 않습니다.\n문항명 행: ${a.headerRow}행 / ${a.hasSurveyText?`TXT 인식 ${a.surveyCount}문항 / 분석 대상 일치 ${a.matched}열`:'엑셀 문항 사용 / TXT 대조 생략'}`),
       sub('구현 기준 대비 자료 충족 현황'),table(['항목','확인 수','기준','상태'],E().completion(a).map(c=>[c.name,c.actual,c.target,c.actual>=c.target?'충족':'근거/선택 부족']),[3,1,1,2]),
       para('기준 수량보다 자료가 적으면 부족분을 만들어내지 않습니다. 충족 표시는 결과물 수량 확인이며, 정확도 또는 심사 점수가 아닙니다.')];
     for(const w of a.warnings)b.push(para('확인 사항: '+w));
@@ -35,7 +35,7 @@
     if(a.improvements.length<5)b.push(para(`근거에 연결된 제안 ${a.improvements.length}개만 작성했습니다. 남은 항목은 추가 자료 확인 후 작성해야 합니다.`));
     b.push(heading('05  문항별 분석'),para(`${a.scale}점 척도 / 긍정률: ${(a.scale+1)/2+1}~${a.scale}점 / 개선필요율: 1~${(a.scale+1)/2-1}점. 두 비율의 분모는 각 문항의 유효 응답 수입니다.`),table(['문항','평균','유효','긍정 %','개선 %','빈칸','0값','해당 없음','무효'],a.questions.map(q=>[q.header,val(q.avg),q.n,val(q.positive),val(q.negative),q.blank,q.zero,q.excluded,q.invalid]),[4,.7,.6,.8,.8,.6,.6,.7,.6]));
     const selected=a.feedback.filter(f=>f.selected&&f.opinionIds.length);
-    b.push(heading(`06  교육생 개인별 피드백 (${selected.length}명)`),para('아래 메시지는 실제 의견을 반영한 전달용 초안입니다. 개선 조치의 확정, 통보 또는 실제 상담 기록을 의미하지 않습니다. 담당자가 내용과 대상자를 확인한 후 별도로 전달해야 합니다.'));
+    b.push(heading(`06  교육생 개인별 피드백 (${selected.length}명)`),para('아래 메시지는 익명 응답별 의견을 반영한 검토용 초안입니다. 익명 번호로 실제 응답자를 추적하거나 메시지를 자동 발송하지 않습니다. 개선 조치의 확정, 통보 또는 실제 상담 기록을 의미하지 않습니다.'));
     if(!selected.length)b.push(para('선택한 피드백이 없습니다.'));
     selected.forEach(f=>b.push(sub(`${f.respondent} / 평균 ${val(f.average)} / ${f.edited?'담당자 수정본':'자동 작성 초안'}`),para('근거: '+f.opinionIds.join(', ')),para(f.message)));
     if(includeComments){
@@ -78,7 +78,7 @@
     const FONT='"Malgun Gothic","Apple SD Gothic Neo","Noto Sans CJK KR","NanumGothic",sans-serif';
     let canvas,ctx,y,pageNo=0;
     function font(size=13,bold=false){ctx.font=(bold?'700 ':'400 ')+size+'px '+FONT;ctx.fillStyle='#23344b';}
-    function finish(){if(!canvas)return;font(10);ctx.fillStyle='#65768b';ctx.fillText('경기인력개발원 | 강의평가 분석 | 담당자 검토용',M,1090);ctx.textAlign='right';ctx.fillText(String(pageNo),W-M,1090);ctx.textAlign='left';images.push({bytes:jpegBytes(canvas),width:canvas.width,height:canvas.height});canvas.width=1;canvas.height=1;}
+    function finish(){if(!canvas)return;font(10);ctx.fillStyle='#65768b';ctx.fillText('경기인력개발원 | 강의평가 분석 | v'+a.version+' | 담당자 검토용',M,1090);ctx.textAlign='right';ctx.fillText(String(pageNo),W-M,1090);ctx.textAlign='left';images.push({bytes:jpegBytes(canvas),width:canvas.width,height:canvas.height});canvas.width=1;canvas.height=1;}
     function newPage(){finish();if(images.length>=100)throw new Error('PDF가 100쪽을 넘습니다. 전체 의견 부록이나 선택 피드백 수를 줄여주세요.');pageNo++;canvas=document.createElement('canvas');canvas.width=W*SCALE;canvas.height=H*SCALE;ctx=canvas.getContext('2d',{alpha:false});ctx.scale(SCALE,SCALE);ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);font(11,true);ctx.fillStyle='#17345f';ctx.fillText('강의평가 분석 보고서',M,40);ctx.textAlign='right';font(10);ctx.fillText(E().cut(a.course,37),W-M,40);ctx.textAlign='left';ctx.strokeStyle='#ccd7e5';ctx.beginPath();ctx.moveTo(M,53);ctx.lineTo(W-M,53);ctx.stroke();y=78;}
     function ensure(h){if(y+h>BOTTOM)newPage();}
     function wrap(value,width,size=13,bold=false){font(size,bold);const lines=[];for(const p of String(value??'').split('\n')){let line='';for(const ch of Array.from(p)){if(line&&ctx.measureText(line+ch).width>width){lines.push(line.trimEnd());line=ch;}else line+=ch;}lines.push(line);}return lines.length?lines:[''];}

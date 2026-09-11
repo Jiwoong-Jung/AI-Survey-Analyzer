@@ -1,36 +1,42 @@
-# 검증 기록 — v2.0.1
+# v2.1.0 검증 기록
 
-작성일: 2026-09-11
+## 범위
+- 분석 엔진 회귀 테스트: **18개 통과** (`node tests/analysis.test.cjs`)
+- 로컬 Chromium UI/코드 점검: **18개 통과**
+- 가상 응답 XLSX: 18명, 유효점수 141개, 평균 3.43/5, 분석 의견 16건
+- 사용자가 제공한 원본 XLSX: TXT 없이 분석 성공. 같은 설정에서 TXT를 추가해도 평균, 문항별 분석, 키워드, 의견 분류, 개선안, 개인별 피드백이 동일함을 확인
+- 가상 자료 PDF: 실제 다운로드 파일 생성, A4 6쪽, 페이지 구조 확인
+- 실제 응답 원본, 이름 대응표 및 실제 자료 PDF는 배포 파일에 포함하지 않음
 
-## 수행한 검증
-
-분석 엔진 회귀 테스트 8개와 Chromium 기능 테스트 25개가 통과했습니다. 앱 JavaScript 구문 검사도 통과했습니다. 가상 시연 자료로 생성한 6쪽 PDF와 업로드된 기존 응답 자료로 생성한 7쪽 PDF를 PDF 렌더러로 열어 한글 표시와 페이지 구성을 확인했습니다. 실제 자료의 원문이나 해당 PDF는 배포 압축에 넣지 않았습니다.
-
-| 범위 | 확인 내용 | 결과 |
-| --- | --- | --- |
-| 점수 | 빈칸, 실제 숫자 0, 해당 없음, 무효값, 정상 점수 구분 | 통과 |
-| 척도 | 5점 문구와 숫자, 7점 숫자 처리 | 통과 |
-| XLSX | 공유 문자열의 빈 값과 숫자 0의 구분, inlineStr 자료 | 통과 |
-| 기존 자료 | 문항명 2행 감지, TXT 문항 대조, 유효 점수와 평균 | 통과 |
-| 재현 | 같은 자료와 같은 분석 시각 설정의 결과 일치 | 통과 |
-| 의견 | 짧은 의견 유지, 내용 없는 응답 제외 | 통과 |
-| 익명화 | 탐지된 이름, 이메일, 연락처 가림, 제외 행 이후 ID 일관성 | 통과 |
-| 시연 | 키워드 10개, 범주별 사유 최대 5개, 제안 5개, 피드백 10명 | 통과 |
-| 수정 | 분류 수정 반영, 피드백 수정 내용 유지 및 미리보기 반영 | 통과 |
-| PDF | 다운로드 파일 형식, 저장 시 재분석하지 않음, 한글 출력 | 통과 |
-| 초기화 | 이전 결과 및 검토 확인 상태 초기화 | 통과 |
-| 오류 | 손상 XLSX 안내 및 이전 보고서 다운로드 비활성화 | 통과 |
-| 화면 | PC 1440px 및 휴대폰 390px, 문서 전체 가로 넘침 없음 | 통과 |
-| 보안 기능 | 의견 속 HTML을 실행하지 않고 텍스트 표시, 기능 실행 중 자료 전송 요청 없음 | 통과 |
+## UI 점검 내역
+1. Initial load / latest version / no JavaScript error
+2. Missing workbook produces a usable message, not a TXT requirement
+3. Built-in demonstration runs with no TXT
+4. XLSX-only file upload produces the expected 18-response result
+5. Optional matching TXT leaves all analytical results unchanged
+6. Removing TXT preserves sheet/header and supports re-analysis
+7. Unreadable optional TXT is explained and Excel-only remains usable
+8. Mismatched optional TXT warns without changing score/feedback
+9. Invalid XLSX clears stale results and disables report download
+10. Changing scale invalidates prior results and re-analyzes as 7-point
+11. Edited individual feedback and skipped TXT status are reflected in PDF preview
+12. Manual classification refreshes linked output, preserves edited feedback, resets confirmation
+13. PDF downloaded successfully with valid A4 pages
+14. User-provided workbook: XLSX-only and optional TXT results match
+15. Static code check: no automatic localStorage or sessionStorage writes
+16. No external network request during analysis or PDF creation
+17. No runtime JavaScript errors in the tested UI paths
+18. Narrow-screen initial form has no horizontal overflow
 
 ## 환경과 한계
+이 환경은 Chromium의 URL 이동이 정책상 제한되어, 실제 소스의 HTML/CSS/JavaScript를 로컬 브라우저 메모리에 적재하는 테스트 방식으로 검증했습니다. 파일 선택, 분석, 수정, PDF 다운로드의 기능을 검증한 것이며 GitHub 배포 URL, 기관 Windows/Edge, 실제 네트워크 또는 CSP 정책의 집행까지 확인한 것은 아닙니다. 테스트 화면은 가상 자료만 사용했습니다.
 
-- 분석 엔진: Node.js v22.16.0. 포함된 `tests/analysis.test.cjs`를 실행했습니다.
-- 브라우저: Chromium 144.0.7559.96, Playwright. 실행환경의 페이지 탐색 정책 때문에 외부/로컬 웹주소에 접속해 테스트하지 않고, 허용된 빈 문서에 읽어온 HTML과 코드, 스타일을 주입하여 기능을 확인했습니다. 문서의 CSP는 유지했습니다. 이것은 GitHub 게시 서버 및 정적 파일 로딩 경로까지 검증한 배포 테스트가 아닙니다.
-- PDF: PyMuPDF로 A4 페이지 크기 및 렌더링을 확인했습니다. 이미지형 PDF이므로 추출 가능한 한글 텍스트는 없습니다.
-- 의견 분류에 대한 전문가 정답 데이터셋 검증, 보안 취약점 전수 감사, 모든 브라우저/Excel 변형/대용량 파일 조합의 검증은 수행하지 않았습니다.
-- 실제 GitHub Pages 주소에서 사용자의 최종 테스트가 필요합니다. 결과의 정확성과 개인정보 익명화는 공유 전에 반드시 검토해야 합니다.
+분류 정확도, 완전한 익명화, 업무시간 절감률을 수치로 검증했다는 뜻이 아닙니다. 공개 사이트의 현재 파일 교체/배포는 사용자가 수행해야 합니다.
 
-## 재실행
-
-저장소 폴더에서 `node tests/analysis.test.cjs`로 분석 엔진 테스트 8개를 실행할 수 있습니다. 웹사이트 사용에는 Node.js가 필요하지 않습니다. 브라우저에서 `가상 자료로 시연` 버튼을 눌러 결과 확인과 PDF 저장 흐름을 테스트할 수 있습니다.
+## 게시 후 필수 확인
+1. 상단 버전이 2.1.0인지 확인
+2. sample_responses.xlsx만 선택하고 분석 실행
+3. TXT 미선택 상태로 PDF 미리보기에서 ‘엑셀 문항 사용 / TXT 대조 생략’ 확인
+4. 피드백 문구 수정 → 최종 검토 확인 → PDF 다운로드
+5. TXT를 선택 후 해제하고 재분석되는지 확인
+6. 실제 자료는 저장소가 아닌 웹의 파일 선택 버튼으로 불러오기

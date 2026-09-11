@@ -1,4 +1,4 @@
-/* 강의평가 분석 엔진 v2.0.1. 네트워크/저장소 접근 없는 결정적 규칙 기반 분석. */
+/* 강의평가 분석 엔진 v2.1.0. 네트워크/저장소 접근 없는 결정적 규칙 기반 분석. */
 (function(root) {
   'use strict';
   const S = v => v == null ? '' : String(v).trim();
@@ -135,18 +135,19 @@
       const exact=canonQuestions.has(canonical(safeHeader));
       const valid=records.filter(r=>score(r.values[i],options.scale||5).kind==='valid').length;
       const nonempty=records.filter(r=>S(r.values[i])).length;
-      let role=TEXT_HINT.test(h)?'comment':META_HINT.test(h)?'exclude':(exact||Q_HINT.test(h))?'score':(valid>0&&valid/Math.max(nonempty,1)>=0.8)?'score':'exclude';
+      let role=TEXT_HINT.test(h)?'comment':(S(rawRows[hi]?.[i])&&META_HINT.test(h))?'exclude':Q_HINT.test(h)?'score':(valid>0&&valid/Math.max(nonempty,1)>=0.8)?'score':'exclude';
       if(options.roles&&options.roles[i])role=options.roles[i];
       return {index:i,header:safeHeader,role,matched:exact};
     });
     const active=cols.filter(c=>c.role!=='exclude');
-    if(!active.length)throw new Error('분석할 열이 없습니다. 문항명 행과 열의 용도를 확인해주세요.');
-    const filtered=records.filter(r=>active.some(c=>S(r.values[c.index])));
+    if(!active.length&&!options.allowUnconfigured)throw new Error('분석할 열이 없습니다. 문항명 행과 열의 용도를 확인해주세요.');
+    const filtered=active.length?records.filter(r=>active.some(c=>S(r.values[c.index]))):records;
     if(!filtered.length)throw new Error('선택된 설문 열에 응답이 없습니다.');
     // Rebuild participant aliases after omitted rows, keeping feedback labels consistent.
     const finalSanitizer=makeSanitizer(headers,filtered.map(r=>r.values),options.extraNames||'');
     for(const c of cols){c.header=finalSanitizer.safe(headers[c.index]);c.matched=canonQuestions.has(canonical(c.header));}
-    return {headers,columns:cols,records:filtered,headerRow:hi,sanitizer:finalSanitizer,surveyCount:tq.length,skipped,ignoredRows:records.length-filtered.length};
+    const headerIssues=cols.filter(c=>c.role!=='exclude'&&(/^(?:Q\s*\d+|문항\s*\d+|질문\s*\d+|열\s*\d+|이름 없는 열\s*\d+|\d+[.)]?)$/i.test(c.header)||headers.filter(h=>h===headers[c.index]).length>1)).map(c=>c.index+1);
+    return {headers,columns:cols,records:filtered,headerRow:hi,sanitizer:finalSanitizer,surveyCount:tq.length,hasSurveyText:!!S(surveyText),headerIssues,skipped,ignoredRows:records.length-filtered.length};
   }
   function sentiment(text) {
     let s=S(text),pos=0,neg=0;
@@ -168,6 +169,7 @@
     if(![5,7].includes(scale))throw new Error('5점 또는 7점 척도를 선택해주세요.');
     const {records,columns,sanitizer}=prepared;
     const scols=columns.filter(c=>c.role==='score'), ccols=columns.filter(c=>c.role==='comment');
+    if(!scols.length&&!ccols.length)throw new Error('분석할 열이 없습니다. 열의 분석 용도를 지정해주세요.');
     const totals={valid:0,blank:0,zero:0,excluded:0,invalid:0};
     const comments=[],feedback=[],allScores=[],commentStats={meaningful:0,blank:0,nonresponse:0};
     const questions=scols.map(c=>{
@@ -190,7 +192,9 @@
       const vals=scols.map(c=>score(r.values[c.index],scale)).filter(x=>x.kind==='valid').map(x=>x.value);
       feedback.push({respondent,rowIndex:ri,sourceRow:r.sourceRow,average:avg(vals),opinionIds:mine.map(c=>c.id),selected:false,edited:false,message:''});
     });
-    const a={version:'2.0.1',engine:'로컬 규칙 기반 분석 / 생성형 AI 미연결',scale,createdAt:options.createdAt||new Date().toISOString(),course:sanitizer.safe(options.course,{keepDates:true})||'강의평가',period:sanitizer.safe(options.period,{keepDates:true})||'미입력',responses:records.length,columns,questions,comments,feedback,totals,commentStats,avg:avg(allScores),surveyCount:prepared.surveyCount,matched:columns.filter(c=>c.matched).length,headerRow:prepared.headerRow+1,skipped:prepared.skipped,ignoredRows:prepared.ignoredRows,privacy:{teachers:sanitizer.teacherCount,participants:sanitizer.personCount,extra:sanitizer.extraCount},warnings:[]};
+    const a={version:'2.1.0',engine:'로컬 규칙 기반 분석 / 생성형 AI 미연결',scale,createdAt:options.createdAt||new Date().toISOString(),course:sanitizer.safe(options.course,{keepDates:true})||'강의평가',period:sanitizer.safe(options.period,{keepDates:true})||'미입력',responses:records.length,columns,questions,comments,feedback,totals,commentStats,avg:avg(allScores),surveyCount:prepared.surveyCount,hasSurveyText:prepared.hasSurveyText,questionSource:'엑셀 문항 사용',comparisonStatus:prepared.hasSurveyText?'TXT 선택 대조':'TXT 대조 생략',headerIssues:prepared.headerIssues||[],matched:columns.filter(c=>c.role!=='exclude'&&c.matched).length,headerRow:prepared.headerRow+1,skipped:prepared.skipped,ignoredRows:prepared.ignoredRows,privacy:{teachers:sanitizer.teacherCount,participants:sanitizer.personCount,extra:sanitizer.extraCount},warnings:[]};
+    if(prepared.hasSurveyText&&!prepared.surveyCount)a.warnings.push('선택한 TXT에서 대조 가능한 문항 형식을 찾지 못했습니다. 엑셀 문항으로 분석하며 TXT 내용은 별도로 확인해주세요.');
+    if(a.headerIssues.length)a.warnings.push('엑셀 '+a.headerIssues.join(', ')+'열의 문항명이 번호만 있거나 비어 있거나 중복됩니다. 원본 엑셀에 전체 문항 내용을 보완한 뒤 다시 선택해주세요. TXT는 문항을 자동으로 대체하지 않습니다.');
     if(!scols.length)a.warnings.push('정량 문항이 없어 평균은 계산하지 않았습니다.');
     if(!ccols.length)a.warnings.push('서술형 열이 없습니다. 열 용도를 확인해주세요.');
     if(prepared.surveyCount&&a.matched<columns.filter(c=>c.role!=='exclude').length)a.warnings.push('TXT와 XLSX 문항명이 완전히 일치하지 않는 열이 있습니다. 자동으로 순서를 강제 연결하지 않았습니다.');
