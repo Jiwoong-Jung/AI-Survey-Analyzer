@@ -1,98 +1,50 @@
 <!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AI 강의평가 인사이트</title>
-  <link rel="stylesheet" href="style.css" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'none'; font-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; worker-src 'none'">
+<title>AI 강의평가 인사이트 | 경기인력개발원</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css?v=2.0.1">
+<script defer src="analysis.js?v=2.0.1"></script>
+<script defer src="xlsx-reader.js?v=2.0.1"></script>
+<script defer src="demo.js?v=2.0.1"></script>
+<script defer src="pdf-report.js?v=2.0.1"></script>
+<script defer src="app.js?v=2.0.1"></script>
 </head>
 <body>
-<header class="hero">
-  <div>
-    <h1>AI 강의평가 인사이트</h1>
-    <p>설문 문항 TXT + 응답 XLSX를 교체하여 분석하는 웹페이지 도구</p>
-  </div>
-
-  <a
-    href="https://kg.korchamhrd.net/"
-    target="_blank"
-    rel="noopener noreferrer"
-    class="logo-link"
-    aria-label="홈페이지로 이동"
-  >
-    <img src="logo.png" alt="로고" class="header-logo" />
-  </a>
-</header>
-
-  <main class="wrap">
-    <section class="upload-card">
-      <div class="file-field">
-        <label class="btn blue" for="txtFile">설문 문항 TXT 선택</label>
-        <input id="txtFile" type="file" accept=".txt,text/plain" hidden />
-        <span id="txtName" class="file-name">선택되지 않음</span>
-      </div>
-      <div class="file-field">
-        <label class="btn indigo" for="xlsxFile">응답 XLSX 선택</label>
-        <input id="xlsxFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
-        <span id="xlsxName" class="file-name">선택되지 않음</span>
-      </div>
-      <button id="runBtn" class="btn teal">분석 실행</button>
-    </section>
-
-    <section class="privacy-note">
-      <strong>개인정보 보호:</strong> 선택한 TXT/XLSX는 외부 서버에 업로드하지 않고 현재 브라우저 안에서만 분석합니다. 교수자 실명은 분석 화면과 보고서에서 자동 익명화됩니다.
-    </section>
-
-    <section class="kpis">
-      <article><span>총 응답</span><strong id="kpiResponses">-</strong></article>
-      <article><span>전체 평균</span><strong id="kpiAvg">-</strong></article>
-      <article><span>정량 문항</span><strong id="kpiQuestions">-</strong></article>
-      <article><span>서술형 의견</span><strong id="kpiComments">-</strong></article>
-    </section>
-
-    <section class="panel">
-      <nav class="tabs" aria-label="분석 탭">
-        <button class="tab active" data-tab="summary">요약 대시보드</button>
-        <button class="tab" data-tab="questions">문항별 분석</button>
-        <button class="tab" data-tab="keywords">키워드·의견</button>
-        <button class="tab" data-tab="feedback">응답자별 피드백</button>
-      </nav>
-
-      <div id="tab-summary" class="tab-panel active">
-        <p id="summaryText" class="summary-text">TXT와 XLSX 파일을 선택한 뒤 분석을 실행해주세요.</p>
-        <div id="summaryTable"></div>
-      </div>
-
-      <div id="tab-questions" class="tab-panel">
-        <div id="questionTable"></div>
-      </div>
-
-      <div id="tab-keywords" class="tab-panel">
-        <div class="split">
-          <div>
-            <h3>핵심 키워드</h3>
-            <div id="keywordTable"></div>
-          </div>
-          <div>
-            <h3>서술형 의견 원문</h3>
-            <div id="commentTable"></div>
-          </div>
-        </div>
-      </div>
-
-      <div id="tab-feedback" class="tab-panel">
-        <div id="feedbackTable"></div>
-        <div class="actions">
-          <button id="exportBtn" class="btn purple">분석 보고서 저장</button>
-        </div>
-      </div>
-    </section>
-
-    <div id="status" class="status" role="status" aria-live="polite"></div>
-  </main>
-
-  <!-- XLSX 파싱용 SheetJS. 파일 데이터는 서버로 전송되지 않으며 브라우저에서만 처리됩니다. -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="app.js"></script>
-</body>
-</html>
+<header class="hero"><div><p class="eyebrow">경기인력개발원 / 훈련취업팀</p><h1>AI 강의평가 인사이트</h1><p class="subtitle">의견을 확인하고, 개선 방향을 정리하고, 보고서로 연결합니다.</p></div><img src="logo.png" alt="대한상공회의소 경기인력개발원" width="223" height="49"></header>
+<main class="wrap">
+<div class="topline"><p>01 파일 선택 <span>→</span> 02 문항 확인 <span>→</span> 03 결과 검토 <span>→</span> 04 PDF 저장</p><span class="version">웹 버전 2.0.1</span></div>
+<section class="card input-card" aria-labelledby="inputHeading">
+<div class="section-head"><div><h2 id="inputHeading">설문 자료 불러오기</h2><p>문항 TXT와 응답 XLSX를 선택하세요. 파일은 서버로 전송하지 않습니다.</p></div><button id="demoBtn" class="btn secondary" type="button">가상 자료로 시연</button></div>
+<div class="fields metadata"><label>과정명<input id="course" type="text" maxlength="100" placeholder="예: 전기에너지설비시공실무"></label><label>설문 기간<input id="period" type="text" maxlength="80" placeholder="예: 2026년 9월 중간 설문"></label><label>응답 척도<select id="scale"><option value="5">5점 척도 (1~5)</option><option value="7">7점 척도 (1~7, 숫자)</option></select></label></div>
+<div class="fields upload-fields"><label class="file-field">설문 문항 TXT<input id="txtFile" type="file" accept=".txt,text/plain"><small id="txtName">선택되지 않음</small></label><label class="file-field">설문 응답 XLSX<input id="xlsxFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"><small id="xlsxName">선택되지 않음</small></label></div>
+<details id="settings"><summary>문항 인식과 익명화 설정 <span id="mappingCount"></span></summary>
+<div class="fields settings-fields"><label>응답 시트<select id="sheetSelect" disabled><option>파일 선택 후 표시</option></select></label><label>문항명 행 (엑셀 행 번호)<input id="headerRow" type="number" min="1" max="3001" value="1"></label><label>TXT 문자 인코딩<select id="encoding"><option value="auto">자동 (UTF-8 우선)</option><option value="utf-8">UTF-8</option><option value="euc-kr">EUC-KR</option></select></label></div>
+<label>추가로 가릴 실명이나 식별정보<textarea id="extraNames" rows="2" maxlength="3000" placeholder="한 줄에 하나씩 입력하세요. 자동으로 발견하지 못한 이름도 여기에 넣을 수 있습니다."></textarea></label>
+<p class="fine">자동 인식은 완벽하지 않습니다. 아래에서 정량 점수, 서술형 의견, 제외 열을 확인하세요. 다른 시트는 합산하지 않습니다.</p><div id="columnMapping" class="empty compact">응답 파일을 선택하면 익명화한 문항명이 표시됩니다.</div>
+</details>
+<div class="actions"><button id="runBtn" class="btn primary" type="button">분석 실행</button><button id="resetBtn" class="btn secondary" type="button">자료와 결과 초기화</button><span id="inputInfo" class="fine"></span></div>
+</section>
+<div class="notice"><strong>분석 방식:</strong> 이 버전은 브라우저 안의 <strong>규칙과 주제 사전</strong>으로 분석합니다. 생성형 AI는 연결되어 있지 않으며, 분류와 제안은 담당자가 검토할 초안입니다. 근거가 부족한 항목을 임의로 채우지 않습니다.</div>
+<div id="status" class="status" role="status" aria-live="polite">자료를 선택하거나 가상 시연을 시작해주세요.</div>
+<div id="demoBanner" class="demo-banner" hidden>가상 자료 시연 중입니다. 실제 교육생의 응답이나 성과가 아닙니다.</div>
+<section class="kpis" aria-label="분석 요약"><article><span>분석 대상</span><strong id="kpiResponses">—</strong><small>선택한 설문 열에 값이 있는 응답</small></article><article><span>전체 평균</span><strong id="kpiAvg">—</strong><small>유효한 정량 응답을 합산한 평균</small></article><article><span>정량 문항</span><strong id="kpiQuestions">—</strong><small>열 설정에서 선택한 점수 문항</small></article><article><span>분석 가능 의견</span><strong id="kpiComments">—</strong><small>빈칸과 내용 없는 응답 제외</small></article></section>
+<section class="card results"><div class="tabs" role="tablist" aria-label="분석 결과">
+<button class="tab active" id="tab-summary" role="tab" aria-selected="true" aria-controls="panel-summary" data-tab="summary">요약</button><button class="tab" id="tab-questions" role="tab" aria-selected="false" aria-controls="panel-questions" data-tab="questions" tabindex="-1">문항별 분석</button><button class="tab" id="tab-keywords" role="tab" aria-selected="false" aria-controls="panel-keywords" data-tab="keywords" tabindex="-1">키워드</button><button class="tab" id="tab-opinions" role="tab" aria-selected="false" aria-controls="panel-opinions" data-tab="opinions" tabindex="-1">의견 분류</button><button class="tab" id="tab-improvements" role="tab" aria-selected="false" aria-controls="panel-improvements" data-tab="improvements" tabindex="-1">개선 방안</button><button class="tab" id="tab-feedback" role="tab" aria-selected="false" aria-controls="panel-feedback" data-tab="feedback" tabindex="-1">개인별 피드백</button><button class="tab" id="tab-report" role="tab" aria-selected="false" aria-controls="panel-report" data-tab="report" tabindex="-1">PDF 미리보기</button>
+</div>
+<div id="panel-summary" class="tab-panel" role="tabpanel" aria-labelledby="tab-summary"><div id="summaryContent" class="empty">분석 결과가 이곳에 표시됩니다.</div></div>
+<div id="panel-questions" class="tab-panel" role="tabpanel" aria-labelledby="tab-questions" hidden><h2>문항별 점수와 제외 내역</h2><p class="fine" id="scoreMethod">빈칸, 0, 해당 없음, 기타 무효값을 각각 구분합니다.</p><div id="questionContent"></div></div>
+<div id="panel-keywords" class="tab-panel" role="tabpanel" aria-labelledby="tab-keywords" hidden><h2>핵심 키워드 10개</h2><p class="fine">유사 표현을 주제 사전으로 묶습니다. 빈도는 해당 주제를 언급한 의견 수이며, 한 의견에서 여러 번 언급해도 1건입니다. 서로 다른 주제의 빈도는 중복될 수 있습니다.</p><div id="keywordContent"></div></div>
+<div id="panel-opinions" class="tab-panel" role="tabpanel" aria-labelledby="tab-opinions" hidden><h2>긍정 / 중립 / 부정 의견 검토</h2><p class="fine">하나의 의견 셀을 한 건으로 분류합니다. 혼합 의견과 판단이 어려운 의견은 검토 표시가 붙습니다. 분류를 수정하면 사유, 제안, 미수정 피드백을 함께 갱신합니다.</p><div id="sentimentSummary"></div><div id="reasonContent" class="reason-grid"></div><div class="filter-row"><label>의견 필터<select id="opinionFilter"><option value="all">전체 의견</option><option>긍정</option><option>중립</option><option>부정</option><option value="review">검토 필요</option></select></label></div><div id="opinionContent"></div></div>
+<div id="panel-improvements" class="tab-panel" role="tabpanel" aria-labelledby="tab-improvements" hidden><h2>교육과정 개선 방안 5가지</h2><p class="fine">관련 의견과 낮은 점수 문항을 우선 확인합니다. 긍정 근거는 유지·강화 제안으로 구분합니다. 실제 시행이 확정된 조치가 아닙니다.</p><div id="improvementContent"></div></div>
+<div id="panel-feedback" class="tab-panel" role="tabpanel" aria-labelledby="tab-feedback" hidden><div class="section-head"><div><h2>개인별 피드백 메시지</h2><p>보고서에 넣을 교육생을 선택하고, 메시지를 검토·수정하세요.</p></div><button id="selectTenBtn" class="btn secondary" type="button">의견 있는 10명 선택</button></div><p id="feedbackCount" class="fine"></p><div id="feedbackContent"></div></div>
+<div id="panel-report" class="tab-panel" role="tabpanel" aria-labelledby="tab-report" hidden><h2>PDF에 담길 내용</h2><p class="fine">화면에서 확정한 동일한 결과를 사용합니다. PDF를 저장할 때 다시 분석하지 않습니다.</p><div id="reportPreview" class="report-preview"></div></div>
+</section>
+<section class="card export-card"><div><h2>최종 보고서 저장</h2><p class="fine">A4 / 한글 지원 / 자동 페이지 나눔 / 페이지 번호. 이미지형 PDF이므로 텍스트 검색과 복사는 제한됩니다.</p><label class="check"><input type="checkbox" id="includeComments">익명화된 전체 의견을 부록에 포함</label><label class="check"><input type="checkbox" id="privacyChecked">실명과 식별정보, 분류 결과 및 메시지를 검토했습니다.</label><small>이름 자동 탐지만으로 완전한 익명화를 보장하지 않습니다. 새로 입력한 개인정보는 추가 익명화 설정에서도 확인하세요.</small></div><button id="exportBtn" class="btn primary" type="button" disabled>PDF 보고서 다운로드</button></section>
+<footer>선택한 자료는 현재 페이지의 메모리에서 처리하며 자동 저장하지 않습니다. 브라우저 확장 프로그램과 공유 PC 환경은 별도로 확인하세요.<br>v2.0.1 / 실제 응답 파일은 GitHub 저장소에 올리지 마세요.</footer>
+</main><noscript>이 프로그램은 JavaScript가 필요합니다.</noscript>
+</body></html>
